@@ -1,0 +1,6 @@
+play a {pattern} beat at {bpm} bpm
+play the {pattern} beat at {bpm} bpm
+start a {pattern} beat at {bpm} bpm
+play a {pattern} beat
+play the {pattern} beat
+start a {pattern} beat

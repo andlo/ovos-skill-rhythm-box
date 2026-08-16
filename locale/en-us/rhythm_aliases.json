@@ -1,0 +1,12 @@
+{
+  "_notes": [
+    "Keys are spoken pattern names, values are the key in PATTERNS (__init__.py)."
+  ],
+  "rock": "rock",
+  "rock beat": "rock",
+  "four on the floor": "four_on_the_floor",
+  "four-on-the-floor": "four_on_the_floor",
+  "disco": "four_on_the_floor",
+  "house": "four_on_the_floor",
+  "house beat": "four_on_the_floor"
+}

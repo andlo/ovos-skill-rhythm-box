@@ -5,8 +5,8 @@
   "pip_spec": "ovos-skill-rhythm-box",
   "license": "GPL-3.0-or-later",
   "author": "andlo",
-  "name": "RhythmBox",
-  "description": "A simple drum-machine/rhythm-box skill for OVOS - loop a basic beat pattern (rock, four-on-the-floor, etc) at a chosen tempo, using short bundled percussion samples. More involved than the metronome: needs a small sample library and a pattern-sequencing loop, not just a fixed click.",
+  "name": "Rhythm Box",
+  "description": "A simple drum-machine skill - loops a beat pattern (rock, four-on-the-floor) at a chosen tempo. Fully offline, generated drum sounds.",
   "examples": [
     "play a rock beat at 100 bpm",
     "start a drum loop",

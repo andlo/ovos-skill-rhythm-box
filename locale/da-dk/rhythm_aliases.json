@@ -1,0 +1,12 @@
+{
+  "_notes": [
+    "Danske mønster-navne er et lavere-tillid første bud, ikke faktatjekket på samme måde som fx da-dk enheds-alias i ovos-skill-convert - der findes ikke en stærk etableret dansk fagterm for 'four on the floor' specifikt, så 'disco' bruges som det mest genkendelige ord.",
+    "Keys er talte mønster-navne, values er nøglen i PATTERNS (__init__.py)."
+  ],
+  "rock": "rock",
+  "rockbeat": "rock",
+  "et rockbeat": "rock",
+  "disco": "four_on_the_floor",
+  "discobeat": "four_on_the_floor",
+  "et discobeat": "four_on_the_floor"
+}
