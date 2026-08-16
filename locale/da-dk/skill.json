@@ -1,0 +1,22 @@
+{
+  "skill_id": "ovos-skill-rhythm-box.andlo",
+  "source": "https://github.com/andlo/ovos-skill-rhythm-box",
+  "package_name": "ovos-skill-rhythm-box",
+  "pip_spec": "ovos-skill-rhythm-box",
+  "license": "GPL-3.0-or-later",
+  "author": "andlo",
+  "name": "RhythmBox",
+  "description": "Et simpelt rytmeboks-skill til OVOS - loop et basalt beat-moenster (rock, four-on-the-floor osv) i et valgt tempo, med korte bundlede percussion-samples. Mere involveret end metronomen: kraever et lille sample-bibliotek og en moenster-sekvenser, ikke bare et fast klik.",
+  "examples": [
+    "spil et rock-beat paa 100 bpm",
+    "start et trommeloop",
+    "stop beatet"
+  ],
+  "tags": [
+    "music",
+    "drums",
+    "rhythm",
+    "beat"
+  ],
+  "icon": "https://raw.githubusercontent.com/andlo/ovos-skill-rhythm-box/main/icon.png"
+}
