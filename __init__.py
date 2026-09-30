@@ -125,6 +125,27 @@ OCP_CONF_NAMED = 100    # "a rock beat", "a disco beat at 100 bpm"
 OCP_CONF_GENERIC = 90   # "a beat", "a drum loop"
 
 
+BPM_WORDS = r"(?:bpm|beats per minute|slag i minuttet)"
+
+
+def _pop_bpm(text, lang):
+    """(bpm, text without it) for "... 90 bpm" / "... ninety bpm" /
+    "... one hundred bpm". Tries the nearest one, two, then three words
+    before the unit, so "metronome 60 bpm" keeps "metronome".
+    (None, text) when there is no bpm; (False, text) when it doesn't parse."""
+    m = re.search(rf"((?:\w+ ){{1,3}}){BPM_WORDS}\b", text + " ")
+    if not m:
+        return None, text
+    words = m.group(1).split()
+    for n in range(1, len(words) + 1):
+        cand = " ".join(words[-n:])
+        value = extract_number(cand, lang=lang)
+        if value not in (False, None):
+            span = re.search(rf"\b{re.escape(cand)} {BPM_WORDS}\b", text)
+            return int(round(value)), (text[:span.start()] + " " + text[span.end():])
+    return False, text
+
+
 class RhythmBox(OVOSCommonPlaybackSkill):
 
     def __init__(self, *args, **kwargs):
@@ -224,14 +245,9 @@ class RhythmBox(OVOSCommonPlaybackSkill):
                 break
         else:
             beaty = ""
-        bpm = None
-        m = re.search(r"\b(\w+(?: \w+)?) (?:bpm|beats per minute)\b", text)
-        if m:
-            bpm = extract_number(m.group(1), lang=lang)
-            if bpm is False or bpm is None or not (MIN_BPM <= int(round(bpm)) <= MAX_BPM):
-                return None
-            bpm = int(round(bpm))
-            text = text.replace(m.group(0), " ")
+        bpm, text = _pop_bpm(text, lang)
+        if bpm is False or (bpm is not None and not (MIN_BPM <= bpm <= MAX_BPM)):
+            return None
         words = text.split()
         anchors = {w.lower() for w in self.voc_list("beat", lang)}
         if not (anchors.intersection(words) or any(a in beaty for a in anchors)):
