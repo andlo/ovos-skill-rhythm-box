@@ -47,12 +47,15 @@ is a code bug rather than a backend limitation.
 """
 
 import json
+import re
 import threading
 import time
 from pathlib import Path
 
-from ovos_workshop.skills import OVOSSkill
+from ovos_utils.ocp import MediaEntry, MediaType, PlaybackType
 from ovos_workshop.decorators import intent_handler
+from ovos_workshop.decorators.ocp import ocp_play, ocp_search
+from ovos_workshop.skills.common_play import OVOSCommonPlaybackSkill
 from ovos_number_parser import extract_number
 
 SKILL_ROOT = Path(__file__).resolve().parent
@@ -112,11 +115,47 @@ def _load_pattern_aliases_from_disk():
 
 PATTERN_ALIASES = _load_pattern_aliases_from_disk()
 
+# "play a rock beat" is taken by the OCP pipeline before padatious, so
+# the skill also answers OCP's search (issue #3), and OCP hands playback
+# back via @ocp_play (PlaybackType.SKILL - the beat is generated here).
+# OCP only asks skills that support the media type it guessed, so AUDIO,
+# MUSIC and GENERIC are accepted and the result echoes the query's type.
+OCP_MEDIA = [MediaType.AUDIO, MediaType.MUSIC, MediaType.GENERIC]
+OCP_CONF_NAMED = 100    # "a rock beat", "a disco beat at 100 bpm"
+OCP_CONF_GENERIC = 90   # "a beat", "a drum loop"
 
-class RhythmBox(OVOSSkill):
+
+BPM_WORDS = r"(?:bpm|beats per minute|slag i minuttet)"
+
+
+def _pop_bpm(text, lang):
+    """(bpm, text without it) for "... 90 bpm" / "... ninety bpm" /
+    "... one hundred bpm". Tries the nearest one, two, then three words
+    before the unit, so "metronome 60 bpm" keeps "metronome".
+    (None, text) when there is no bpm; (False, text) when it doesn't parse."""
+    m = re.search(rf"((?:\w+ ){{1,3}}){BPM_WORDS}\b", text + " ")
+    if not m:
+        return None, text
+    words = m.group(1).split()
+    for n in range(1, len(words) + 1):
+        cand = " ".join(words[-n:])
+        value = extract_number(cand, lang=lang)
+        if value not in (False, None):
+            span = re.search(rf"\b{re.escape(cand)} {BPM_WORDS}\b", text)
+            return int(round(value)), (text[:span.start()] + " " + text[span.end():])
+    return False, text
+
+
+class RhythmBox(OVOSCommonPlaybackSkill):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, supported_media=OCP_MEDIA,
+                         skill_icon=str(SKILL_ROOT / "icon.png"), **kwargs)
 
     def initialize(self):
-        self._stop_event = threading.Event()
+        # NB: not self._beat_stop - OVOSCommonPlaybackSkill uses that
+        # name for its search, and sets it whenever an OCP search stops.
+        self._beat_stop = threading.Event()
         self._thread = None
         self._last_bpm = None
         self._last_pattern = None
@@ -139,7 +178,7 @@ class RhythmBox(OVOSSkill):
         step_interval = 60.0 / bpm / 2  # eighth notes = half a quarter-note beat
         step = 0
         next_time = time.monotonic()
-        while not self._stop_event.is_set():
+        while not self._beat_stop.is_set():
             current = step % STEP_COUNT
             for instrument, steps in pattern.items():
                 if current in steps:
@@ -148,7 +187,7 @@ class RhythmBox(OVOSSkill):
             next_time += step_interval
             sleep_time = next_time - time.monotonic()
             if sleep_time > 0:
-                self._stop_event.wait(sleep_time)
+                self._beat_stop.wait(sleep_time)
             else:
                 next_time = time.monotonic()
 
@@ -156,13 +195,13 @@ class RhythmBox(OVOSSkill):
         self._stop()
         self._last_bpm = bpm
         self._last_pattern = pattern_name
-        self._stop_event.clear()
+        self._beat_stop.clear()
         self._thread = threading.Thread(
             target=self._step_loop, args=(bpm, pattern_name), daemon=True)
         self._thread.start()
 
     def _stop(self):
-        self._stop_event.set()
+        self._beat_stop.set()
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=2)
         self._thread = None
@@ -172,6 +211,89 @@ class RhythmBox(OVOSSkill):
 
     def shutdown(self):
         self._stop()
+
+    # ------------------------------------------------------------------
+    # Global "stop" and OCP's stop
+    # ------------------------------------------------------------------
+
+    def can_stop(self, message=None) -> bool:
+        return self._is_running()
+
+    def stop(self):
+        if not self._is_running():
+            return False
+        self._stop()
+        return True
+
+    # ------------------------------------------------------------------
+    # OCP: "play a rock beat" (issue #3)
+    # ------------------------------------------------------------------
+
+    def _ocp_match(self, phrase, lang):
+        """(pattern, bpm, confidence) when the phrase asks for a beat and
+        nothing else: "a rock beat", "a disco beat at 100 bpm",
+        "a drum loop". Leftover words ("rock beat by some band") -> None."""
+        text = " ".join(re.findall(r"\w+", (phrase or "").lower()))
+        if not text:
+            return None
+        pattern = None
+        for alias in sorted(self._pattern_aliases_for(lang), key=len, reverse=True):
+            if re.search(rf"\b{re.escape(alias.lower())}\b", text):
+                pattern = self._pattern_aliases_for(lang)[alias]
+                text = re.sub(rf"\b{re.escape(alias.lower())}\b", " ", text, count=1)
+                beaty = alias.lower()
+                break
+        else:
+            beaty = ""
+        bpm, text = _pop_bpm(text, lang)
+        if bpm is False or (bpm is not None and not (MIN_BPM <= bpm <= MAX_BPM)):
+            return None
+        words = text.split()
+        anchors = {w.lower() for w in self.voc_list("beat", lang)}
+        if not (anchors.intersection(words) or any(a in beaty for a in anchors)):
+            return None
+        filler = {w.lower() for w in self.voc_list("filler", lang)}
+        if [w for w in words if w not in anchors and w not in filler]:
+            return None
+        pattern_used = pattern or self._last_pattern or DEFAULT_PATTERN
+        bpm_used = bpm or self._last_bpm or DEFAULT_BPM
+        return pattern_used, bpm_used, (OCP_CONF_NAMED if pattern else OCP_CONF_GENERIC)
+
+    @ocp_search()
+    def search_beat(self, phrase, media_type=MediaType.GENERIC):
+        match = self._ocp_match(phrase, self.lang)
+        if not match:
+            return []
+        pattern, bpm, confidence = match
+        return [MediaEntry(
+            # not file:// - OCP's files extractor would make it AUDIO
+            uri=f"/{self.skill_id}/{pattern}/{bpm}",
+            title=f"{pattern.replace('_', ' ')} beat, {bpm} bpm",
+            artist="Rhythm Box",
+            media_type=media_type if media_type in OCP_MEDIA else MediaType.AUDIO,
+            playback=PlaybackType.SKILL,
+            match_confidence=confidence,
+            skill_icon=self.skill_icon,
+            skill_id=self.skill_id,
+        )]
+
+    def activate(self, duration_minutes=None):
+        """ovos-workshop 7.x (stable/testing): OVOSCommonPlaybackSkill's
+        play handler calls self.activate(), which only ConversationalSkill
+        has there. 9.x dropped the call. This skill doesn't converse."""
+
+    @ocp_play()
+    def play_beat(self, message=None):
+        """OCP picked our search result - play it ourselves."""
+        uri = (message.data.get("uri") if message else "") or ""
+        parts = uri.strip("/").split("/")
+        pattern = parts[1] if len(parts) > 1 and parts[1] in PATTERNS else DEFAULT_PATTERN
+        try:
+            bpm = int(parts[2])
+        except (IndexError, ValueError):
+            bpm = DEFAULT_BPM
+        bpm = min(max(bpm, MIN_BPM), MAX_BPM)
+        self._start(bpm, pattern)
 
     @intent_handler("set_rhythm.intent")
     def handle_set_rhythm(self, message):

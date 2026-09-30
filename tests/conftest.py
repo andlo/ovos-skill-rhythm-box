@@ -26,7 +26,9 @@ def skill(monkeypatch):
     monkeypatch.setattr(RhythmBox, "lang", "en-us", raising=False)
     s.res_dir = str(Path(__file__).resolve().parents[1])
     s._lang_resources = {}
-    s._stop_event = threading.Event()
+    s._beat_stop = threading.Event()
+    s._voc_cache = {}
+    s.skill_icon = ""
     s._thread = None
     s._last_bpm = None
     s._last_pattern = None
