@@ -1,0 +1,6 @@
+{"utterance": "play a rock beat at 120 bpm", "lang": "en-US", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "set_rhythm"}
+{"utterance": "play the four on the floor beat at 90 bpm", "lang": "en-US", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "set_rhythm"}
+{"utterance": "start a rock beat at 100 bpm", "lang": "en-US", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "set_rhythm"}
+{"utterance": "start a drum loop", "lang": "en-US", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "start_rhythm"}
+{"utterance": "start the beat", "lang": "en-US", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "start_rhythm"}
+{"utterance": "play a beat", "lang": "en-US", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "start_rhythm"}
