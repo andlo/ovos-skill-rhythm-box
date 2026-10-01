@@ -1,0 +1,6 @@
+{"utterance": "spil et rock beat på 120 bpm", "lang": "da-DK", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "set_rhythm"}
+{"utterance": "spil disco beatet på 90 bpm", "lang": "da-DK", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "set_rhythm"}
+{"utterance": "start et rock beat på 100 bpm", "lang": "da-DK", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "set_rhythm"}
+{"utterance": "start et trommeloop", "lang": "da-DK", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "start_rhythm"}
+{"utterance": "start beatet", "lang": "da-DK", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "start_rhythm"}
+{"utterance": "spil et beat", "lang": "da-DK", "skill_id": "ovos-skill-rhythm-box.andlo", "intent_label": "start_rhythm"}
